@@ -8,13 +8,14 @@ import { Prisma } from '@prisma/client';
 export class NotesService {
   constructor(private prisma: PrismaService) {}
 
-  async create(createNoteDto: CreateNoteDto) {
+  async create(createNoteDto: CreateNoteDto, userId: number) {
     try {
       const { title, content } = createNoteDto;
       return await this.prisma.note.create({
         data: {
           title,
           content,
+          userId,
         } as any,
       });
     } catch (error) {
@@ -26,9 +27,12 @@ export class NotesService {
     }
   }
 
-  async findAll() {
+  async findAll(userId: number) {
     try {
       return await this.prisma.note.findMany({
+        where: {
+          userId,
+        },
         orderBy: {
           createdAt: 'desc',
         },
@@ -42,10 +46,10 @@ export class NotesService {
     }
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, userId: number) {
     try {
       const note = await this.prisma.note.findUnique({
-        where: { id },
+        where: { id, userId },
       });
       if (!note) {
         throw new HttpException('Note not found', HttpStatus.NOT_FOUND);
@@ -61,10 +65,10 @@ export class NotesService {
     }
   }
 
-  async update(id: string, updateNoteDto: UpdateNoteDto) {
+  async update(id: string, updateNoteDto: UpdateNoteDto, userId: number) {
     try {
       return await this.prisma.note.update({
-        where: { id },
+        where: { id, userId },
         data: updateNoteDto,
       });
     } catch (error) {
@@ -76,10 +80,10 @@ export class NotesService {
     }
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId: number) {
     try {
       return await this.prisma.note.delete({
-        where: { id },
+        where: { id, userId },
       });
     } catch (error) {
       console.error('Error deleting note:', error);
