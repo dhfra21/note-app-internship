@@ -12,8 +12,10 @@ import {
 } from '@mui/material';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
+import { useAuth } from '@/contexts/AuthContext';
 
 const ProfileUpload: React.FC = () => {
+  const { token } = useAuth();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,12 +24,19 @@ const ProfileUpload: React.FC = () => {
   const [profilePicture, setProfilePicture] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchProfilePicture();
-  }, []);
+    if (token) {
+      fetchProfilePicture();
+    }
+  }, [token]);
 
   const fetchProfilePicture = async () => {
+    if (!token) return;
     try {
-      const response = await fetch('http://localhost:3001/users/profile');
+      const response = await fetch('http://localhost:3001/users/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
       if (!response.ok) {
         throw new Error('Failed to fetch profile picture');
       }
@@ -62,7 +71,7 @@ const ProfileUpload: React.FC = () => {
   };
 
   const handleUpload = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile || !token) return;
 
     setIsUploading(true);
     setError(null);
@@ -71,10 +80,12 @@ const ProfileUpload: React.FC = () => {
     try {
       const formData = new FormData();
       formData.append('file', selectedFile);
-      formData.append('userId', '2'); // Hardcoded user ID for now
 
       const response = await fetch('http://localhost:3001/users/upload-profile-picture', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData,
       });
 
@@ -85,7 +96,8 @@ const ProfileUpload: React.FC = () => {
 
       const data = await response.json();
       setSuccess('Profile picture uploaded successfully!');
-      setProfilePicture(previewUrl); // Update the displayed profile picture
+      // Fetch the updated profile picture from the server
+      await fetchProfilePicture();
       
       // Clear the success message after 3 seconds
       setTimeout(() => {

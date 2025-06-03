@@ -1,7 +1,9 @@
-import { Controller, Post, UseInterceptors, UploadedFile, Get, BadRequestException } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, Get, BadRequestException, UseGuards, Req } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PrismaClient } from '@prisma/client';
 import { Multer } from 'multer';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Request } from 'express';
 
 const prisma = new PrismaClient();
 
@@ -22,9 +24,11 @@ export class UsersController {
   }
 
   @Post('upload-profile-picture')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(FileInterceptor('file'))
   async uploadProfilePicture(
     @UploadedFile() file: Multer.File,
+    @Req() req: Request
   ) {
     try {
       console.log('Starting profile picture upload...');
@@ -37,10 +41,12 @@ export class UsersController {
         throw new BadRequestException('File buffer is empty');
       }
 
-      // First, let's verify the user exists
+      const userId = (req.user as any).userId;
+
+      // verify the user exists
       const existingUser = await prisma.user.findUnique({
         where: {
-          id: 2
+          id: userId
         }
       });
 
@@ -55,7 +61,7 @@ export class UsersController {
       // Update the user's profile picture
       const updatedUser = await prisma.user.update({
         where: { 
-          id: 2
+          id: userId
         },
         data: { 
           profilePicture: imageData 
@@ -77,11 +83,14 @@ export class UsersController {
   }
 
   @Get('profile')
-  async getUserProfile() {
+  @UseGuards(JwtAuthGuard)
+  async getUserProfile(@Req() req: Request) {
     try {
+      const userId = (req.user as any).userId;
+
       const user = await prisma.user.findUnique({
         where: {
-          id: 2 // Hardcoded for now, should be replaced with actual user ID from auth
+          id: userId
         },
         select: {
           id: true,

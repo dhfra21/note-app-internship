@@ -44,7 +44,7 @@ export default function LoginPage() {
       }
 
       login(data.access_token);
-      router.push('/notes');
+      router.push('/');
     } catch (err: any) {
       setError(err.message);
     }
