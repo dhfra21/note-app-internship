@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -18,8 +19,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if token exists in localStorage on initial load
-    const storedToken = localStorage.getItem('token');
+    // Check if token exists in cookies on initial load
+    const storedToken = Cookies.get('token');
     if (storedToken) {
       setToken(storedToken);
       setIsAuthenticated(true);
@@ -27,13 +28,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = (newToken: string) => {
-    localStorage.setItem('token', newToken);
+    Cookies.set('token', newToken, { expires: 7 }); // Token expires in 7 days
     setToken(newToken);
     setIsAuthenticated(true);
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    Cookies.remove('token');
     setToken(null);
     setIsAuthenticated(false);
     router.push('/login');

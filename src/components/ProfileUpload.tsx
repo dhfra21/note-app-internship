@@ -32,7 +32,7 @@ const ProfileUpload: React.FC = () => {
   const fetchProfilePicture = async () => {
     if (!token) return;
     try {
-      const response = await fetch('http://localhost:3001/users/profile', {
+      const response = await fetch('http://localhost:3001/api/users/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -81,7 +81,7 @@ const ProfileUpload: React.FC = () => {
       const formData = new FormData();
       formData.append('file', selectedFile);
 
-      const response = await fetch('http://localhost:3001/users/upload-profile-picture', {
+      const response = await fetch('http://localhost:3001/api/users/upload-profile-picture', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
