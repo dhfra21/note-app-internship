@@ -4,6 +4,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 class ApiService {
   async getNotes(token: string): Promise<Note[]> {
+    console.log('Making API request:', {
+      endpoint: `${API_URL}/api/notes`,
+      hasToken: !!token,
+      tokenLength: token?.length,
+      tokenPreview: token ? token.substring(0, 20) + '...' : null
+    });
+
     const response = await fetch(`${API_URL}/api/notes`, {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -13,6 +20,10 @@ class ApiService {
     });
 
     if (!response.ok) {
+      console.error('API request failed:', {
+        status: response.status,
+        statusText: response.statusText
+      });
       throw new Error('Failed to fetch notes');
     }
 
