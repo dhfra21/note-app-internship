@@ -1,14 +1,14 @@
-import { Controller, Post, Body, UnauthorizedException, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Controller, Post, Body, UnauthorizedException, UsePipes } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { loginSchema, registerSchema, LoginDto, RegisterDto } from '../schemas/auth.schema';
 
 @Controller('auth')
 export class AuthController {
   constructor(private authService: AuthService) {}
 
   @Post('login')
-  @UsePipes(new ValidationPipe())
+  @UsePipes(new ZodValidationPipe(loginSchema))
   async login(@Body() loginDto: LoginDto) {
     const user = await this.authService.validateUser(
       loginDto.email,
@@ -21,7 +21,7 @@ export class AuthController {
   }
 
   @Post('register')
-  @UsePipes(new ValidationPipe())
+  @UsePipes(new ZodValidationPipe(registerSchema))
   async register(@Body() registerDto: RegisterDto) {
     return this.authService.register(registerDto.email, registerDto.password);
   }

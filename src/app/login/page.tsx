@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { loginSchema, LoginInput } from '@/schemas/auth';
 import {
   Container,
   Box,
@@ -18,13 +19,45 @@ import {
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState<LoginInput>({
+    email: '',
+    password: '',
+  });
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [error, setError] = useState('');
+
+  const validateForm = (): boolean => {
+    try {
+      loginSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof Error) {
+        const zodError = error as any;
+        const newErrors: { email?: string; password?: string } = {};
+        
+        zodError.errors?.forEach((err: any) => {
+          if (err.path.includes('email')) {
+            newErrors.email = err.message;
+          }
+          if (err.path.includes('password')) {
+            newErrors.password = err.message;
+          }
+        });
+        
+        setErrors(newErrors);
+      }
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!validateForm()) {
+      return;
+    }
 
     try {
       const response = await fetch('http://localhost:3001/api/auth/login', {
@@ -32,7 +65,7 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(formData),
       });
 
       const data = await response.json();
@@ -86,8 +119,10 @@ export default function LoginPage() {
               name="email"
               autoComplete="email"
               autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              error={!!errors.email}
+              helperText={errors.email}
             />
             <TextField
               margin="normal"
@@ -98,8 +133,10 @@ export default function LoginPage() {
               type="password"
               id="password"
               autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              error={!!errors.password}
+              helperText={errors.password}
             />
             <Button
               type="submit"

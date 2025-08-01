@@ -1,6 +1,6 @@
 import { Card, CardContent, CardActions, Typography, IconButton } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import { Note } from '../types/note';
+import { Note } from '../schemas/note';
 
 interface NoteCardProps {
     note: Note;

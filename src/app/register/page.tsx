@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { registerSchema, RegisterInput } from '@/schemas/auth';
 import {
   Container,
   Box,
@@ -16,15 +17,45 @@ import {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegisterInput>({
     email: '',
     password: '',
   });
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [error, setError] = useState('');
+
+  const validateForm = (): boolean => {
+    try {
+      registerSchema.parse(formData);
+      setErrors({});
+      return true;
+    } catch (error) {
+      if (error instanceof Error) {
+        const zodError = error as any;
+        const newErrors: { email?: string; password?: string } = {};
+        
+        zodError.errors?.forEach((err: any) => {
+          if (err.path.includes('email')) {
+            newErrors.email = err.message;
+          }
+          if (err.path.includes('password')) {
+            newErrors.password = err.message;
+          }
+        });
+        
+        setErrors(newErrors);
+      }
+      return false;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!validateForm()) {
+      return;
+    }
 
     try {
       const response = await fetch('http://localhost:3001/api/auth/register', {
@@ -87,6 +118,8 @@ export default function RegisterPage() {
               autoFocus
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              error={!!errors.email}
+              helperText={errors.email}
             />
             <TextField
               margin="normal"
@@ -99,6 +132,8 @@ export default function RegisterPage() {
               autoComplete="new-password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              error={!!errors.password}
+              helperText={errors.password}
             />
             <Button
               type="submit"

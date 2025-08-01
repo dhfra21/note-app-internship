@@ -9,6 +9,7 @@ interface AuthContextType {
   token: string | null;
   login: (token: string) => void;
   logout: () => void;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -28,7 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     
     if (storedToken) {
-      // Verify token is valid by making a test request
+      // Set token immediately for better UX
+      setToken(storedToken);
+      setIsAuthenticated(true);
+      
+      // Verify token asynchronously without blocking the UI
       fetch('http://localhost:3001/api/notes', {
         headers: {
           'Authorization': `Bearer ${storedToken}`,
@@ -36,10 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       })
       .then(response => {
-        if (response.ok) {
-          setToken(storedToken);
-          setIsAuthenticated(true);
-        } else {
+        if (!response.ok) {
           // If token is invalid, clear it and redirect to login
           console.log('Invalid token detected, logging out');
           Cookies.remove('token');
@@ -55,11 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(null);
         setIsAuthenticated(false);
         router.push('/login');
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
     } else {
       // No token found, ensure we're logged out
       setToken(null);
       setIsAuthenticated(false);
+      setIsLoading(false);
       router.push('/login');
     }
   }, []);
@@ -84,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, token, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, token, login, logout, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

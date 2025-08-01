@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Container, Typography, Box, Alert, Snackbar } from '@mui/material';
+import { Container, Typography, Box, Alert, Snackbar, CircularProgress } from '@mui/material';
 import NoteForm from './NoteForm';
 import NoteCard from './NoteCard';
 import NotesFilter from './NotesFilter';
-import { Note } from '../types/note';
+import { Note } from '../schemas/note';
 import { api } from '../services/api';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,7 +17,7 @@ interface NotesClientProps {
 
 export default function NotesClient({ initialNotes }: NotesClientProps) {
     const router = useRouter();
-    const { token, isAuthenticated } = useAuth();
+    const { token, isAuthenticated, isLoading } = useAuth();
     const [notes, setNotes] = useState<Note[]>(initialNotes);
     const [filteredNotes, setFilteredNotes] = useState<Note[]>(initialNotes);
     const [editingNote, setEditingNote] = useState<Note | undefined>();
@@ -27,11 +27,11 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
     const [dateFilter, setDateFilter] = useState('');
 
     useEffect(() => {
-        if (!isAuthenticated) {
+        if (!isLoading && !isAuthenticated) {
             router.push('/login');
             return;
         }
-    }, [isAuthenticated, router]);
+    }, [isAuthenticated, isLoading, router]);
 
     useEffect(() => {
         const lowerCaseQuery = searchQuery.toLowerCase();
@@ -77,6 +77,18 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
         setFilteredNotes(filtered);
     }, [notes, searchQuery, dateFilter]);
 
+    // Show loading spinner while auth is being checked
+    if (isLoading) {
+        return (
+            <Container maxWidth="md" sx={{ py: 4, textAlign: 'center' }}>
+                <CircularProgress />
+                <Typography variant="body1" sx={{ mt: 2 }}>
+                    Loading...
+                </Typography>
+            </Container>
+        );
+    }
+
     const handleSearchChange = (value: string) => {
         setSearchQuery(value);
     };
@@ -85,7 +97,7 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
         setDateFilter(value);
     };
 
-    const handleCreateNote = async (noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const handleCreateNote = async (noteData: { title: string; content: string }) => {
         if (!token) return;
         try {
             const newNote = await api.createNote(noteData, token);
@@ -95,7 +107,7 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
         }
     };
 
-    const handleUpdateNote = async (noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const handleUpdateNote = async (noteData: { title: string; content: string }) => {
         if (!token || !editingNote) return;
         try {
             const updatedNote = await api.updateNote(editingNote.id, noteData, token);
@@ -167,11 +179,6 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
             </Snackbar>
 
             <div className="space-x-4">
-                <Link href="/notes">
-                    <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                        Go to Notes
-                    </button>
-                </Link>
                 <Link href="/profile">
                     <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
                         Go to Profile
