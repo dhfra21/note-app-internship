@@ -42,4 +42,25 @@ export class NotesController {
   async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.notesService.remove(id, req.user.userId);
   }
+
+  // Cache test endpoint
+  @Get('test/cache')
+  async testCache(@Req() req: AuthenticatedRequest) {
+    const startTime = Date.now();
+    const result = await this.notesService.findAll(req.user.userId, { 
+      page: 1, 
+      limit: 5,
+      sortBy: 'updatedAt',
+      sortOrder: 'desc'
+    });
+    const endTime = Date.now();
+    const duration = endTime - startTime;
+    
+    return {
+      message: 'Cache test completed',
+      duration: `${duration}ms`,
+      cacheStatus: duration < 50 ? 'HIT' : 'MISS',
+      data: result,
+    };
+  }
 }

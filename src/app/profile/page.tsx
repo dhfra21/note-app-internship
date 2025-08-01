@@ -5,11 +5,20 @@ import { Container, Typography, Box, Paper, Button } from '@mui/material';
 import Link from 'next/link';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ProfileUpload from '@/components/ProfileUpload';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function ProfilePage() {
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    if (window.confirm('Are you sure you want to logout?')) {
+      logout();
+    }
+  };
+
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Link href="/" style={{ textDecoration: 'none' }}>
           <Button
             startIcon={<ArrowBackIcon />}
@@ -19,6 +28,14 @@ export default function ProfilePage() {
             Back to Notes
           </Button>
         </Link>
+        <Button
+          onClick={handleLogout}
+          variant="contained"
+          color="error"
+          sx={{ ml: 2 }}
+        >
+          Logout
+        </Button>
       </Box>
       <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
         <Typography variant="h3" component="h1" gutterBottom>

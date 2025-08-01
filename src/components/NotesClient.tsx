@@ -6,6 +6,7 @@ import NoteForm from './NoteForm';
 import NoteCard from './NoteCard';
 import NotesFilter from './NotesFilter';
 import Pagination from './Pagination';
+import CacheTest from './CacheTest';
 import { Note } from '../schemas/note';
 import { PaginationQuery } from '../schemas/pagination';
 import { api } from '../services/api';
@@ -19,20 +20,21 @@ interface NotesClientProps {
 
 export default function NotesClient({ initialNotes }: NotesClientProps) {
     const router = useRouter();
-    const { token, isAuthenticated, isLoading } = useAuth();
-    const [notes, setNotes] = useState<Note[]>(initialNotes);
+    const { token, isAuthenticated, isLoading, logout } = useAuth();
+    const [notes, setNotes] = useState<Note[]>(initialNotes || []);
     const [editingNote, setEditingNote] = useState<Note | undefined>();
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [dateFilter, setDateFilter] = useState('');
+    const [showCacheTest, setShowCacheTest] = useState(false);
     
-    // Pagination state
+    // Pagination state with safe defaults
     const [pagination, setPagination] = useState({
         page: 1,
         limit: 10,
-        total: initialNotes.length,
-        totalPages: Math.ceil(initialNotes.length / 10),
+        total: initialNotes?.length || 0,
+        totalPages: Math.ceil((initialNotes?.length || 0) / 10),
         hasNext: false,
         hasPrev: false,
     });
@@ -97,16 +99,16 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
 
     const handleDateFilterChange = (value: string) => {
         setDateFilter(value);
-        // Reset to first page when filter changes
         fetchNotes({ page: 1 });
     };
 
     const handleCreateNote = async (noteData: { title: string; content: string }) => {
         if (!token) return;
+        
         try {
-            const newNote = await api.createNote(noteData, token);
-            // Refresh the current page after creating a note
+            await api.createNote(noteData, token);
             fetchNotes();
+            setEditingNote(undefined);
         } catch (err) {
             setError('Failed to create note');
         }
@@ -114,11 +116,10 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
 
     const handleUpdateNote = async (noteData: { title: string; content: string }) => {
         if (!token || !editingNote) return;
+        
         try {
-            const updatedNote = await api.updateNote(editingNote.id, noteData, token);
-            setNotes(notes.map((note) =>
-                note.id === editingNote.id ? updatedNote : note
-            ));
+            await api.updateNote(editingNote.id, noteData, token);
+            fetchNotes();
             setEditingNote(undefined);
         } catch (err) {
             setError('Failed to update note');
@@ -127,6 +128,7 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
 
     const handleDeleteNote = async (id: string) => {
         if (!token) return;
+        
         try {
             await api.deleteNote(id, token);
             // Refresh the current page after deleting a note
@@ -140,11 +142,35 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
         setEditingNote(note);
     };
 
+    const handleLogout = () => {
+        if (window.confirm('Are you sure you want to logout?')) {
+            logout();
+        }
+    };
+
     return (
         <Container maxWidth="md" sx={{ py: 4 }}>
             <Typography variant="h3" component="h1" gutterBottom>
                 My Notes
             </Typography>
+            
+            {/* Cache Test Toggle */}
+            <Box sx={{ mb: 2 }}>
+                <button 
+                    onClick={() => setShowCacheTest(!showCacheTest)}
+                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-2"
+                >
+                    {showCacheTest ? 'Hide' : 'Show'} Cache Test
+                </button>
+            </Box>
+
+            {/* Cache Test Component */}
+            {showCacheTest && (
+                <CacheTest 
+                    onCacheHit={(data) => console.log('Cache hit:', data)}
+                    onCacheMiss={() => console.log('Cache miss')}
+                />
+            )}
             
             <NotesFilter 
                 onSearchChange={handleSearchChange}
@@ -205,6 +231,12 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
                         Go to Profile
                     </button>
                 </Link>
+                <button 
+                    onClick={handleLogout}
+                    className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                >
+                    Logout
+                </button>
             </div>
         </Container>
     );
