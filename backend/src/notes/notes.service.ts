@@ -1,137 +1,88 @@
-import { Injectable, HttpException, HttpStatus, Inject } from '@nestjs/common';
-import { CreateNoteDto } from './dto/create-note.dto';
-import { UpdateNoteDto } from './dto/update-note.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import { CreateNoteDto, UpdateNoteDto } from '../schemas/note.schema';
+import { PaginationQuery, PaginationResponse } from '../schemas/pagination.schema';
 
 @Injectable()
 export class NotesService {
-  constructor(
-    private prisma: PrismaService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
-  ) {}
+  constructor(private prisma: PrismaService) {}
 
   async create(createNoteDto: CreateNoteDto, userId: number) {
-    try {
-      const { title, content } = createNoteDto;
-      const note = await this.prisma.note.create({
-        data: {
-          title,
-          content,
-          userId,
-        } as any,
-      });
-      // Invalidate user's notes cache
-      await this.cacheManager.del(`notes:${userId}`);
-      return note;
-    } catch (error) {
-      console.error('Error creating note:', error);
-      throw new HttpException(
-        'Failed to create note',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    return this.prisma.note.create({
+      data: {
+        ...createNoteDto,
+        userId,
+      },
+    });
   }
 
-  async findAll(userId: number) {
-    try {
-      // Try to get from cache first
-      const cachedNotes = await this.cacheManager.get(`notes:${userId}`);
-      if (cachedNotes) {
-        console.log('Cache HIT: Fetching notes from cache');
-        return cachedNotes;
-      }
+  async findAll(userId: number, query: PaginationQuery): Promise<PaginationResponse<any>> {
+    const { page, limit, search, sortBy, sortOrder } = query;
+    const skip = (page - 1) * limit;
 
-      console.log('Cache MISS: Fetching notes from database');
-      // If not in cache, get from database
-      const notes = await this.prisma.note.findMany({
-        where: {
-          userId,
-        },
-        orderBy: {
-          createdAt: 'desc',
-        },
-      });
+    // Build where clause for search
+    const where = {
+      userId,
+      ...(search && {
+        OR: [
+          { title: { contains: search, mode: 'insensitive' } },
+          { content: { contains: search, mode: 'insensitive' } },
+        ],
+      }),
+    };
 
-      // Store in cache
-      await this.cacheManager.set(`notes:${userId}`, notes);
-      return notes;
-    } catch (error) {
-      console.error('Error fetching notes:', error);
-      throw new HttpException(
-        'Failed to fetch notes',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    // Get total count for pagination
+    const total = await this.prisma.note.count({ where });
+
+    // Get paginated data
+    const data = await this.prisma.note.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { [sortBy]: sortOrder },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    };
   }
 
   async findOne(id: string, userId: number) {
-    try {
-      // Try to get from cache first
-      const cachedNote = await this.cacheManager.get(`note:${id}`);
-      if (cachedNote) {
-        console.log('Cache HIT: Fetching note from cache');
-        return cachedNote;
-      }
+    const note = await this.prisma.note.findFirst({
+      where: { id, userId },
+    });
 
-      console.log('Cache MISS: Fetching note from database');
-      // If not in cache, get from database
-      const note = await this.prisma.note.findUnique({
-        where: { id, userId },
-      });
-      if (!note) {
-        throw new HttpException('Note not found', HttpStatus.NOT_FOUND);
-      }
-
-      // Store in cache
-      await this.cacheManager.set(`note:${id}`, note);
-      return note;
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      console.error('Error fetching note:', error);
-      throw new HttpException(
-        'Failed to fetch note',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    if (!note) {
+      throw new NotFoundException('Note not found');
     }
+
+    return note;
   }
 
   async update(id: string, updateNoteDto: UpdateNoteDto, userId: number) {
-    try {
-      const note = await this.prisma.note.update({
-        where: { id, userId },
-        data: updateNoteDto,
-      });
-      // Invalidate both note and user's notes cache
-      await this.cacheManager.del(`note:${id}`);
-      await this.cacheManager.del(`notes:${userId}`);
-      return note;
-    } catch (error) {
-      console.error('Error updating note:', error);
-      throw new HttpException(
-        'Failed to update note',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    const note = await this.findOne(id, userId);
+
+    return this.prisma.note.update({
+      where: { id },
+      data: updateNoteDto,
+    });
   }
 
   async remove(id: string, userId: number) {
-    try {
-      const note = await this.prisma.note.delete({
-        where: { id, userId },
-      });
-      // Invalidate both note and user's notes cache
-      await this.cacheManager.del(`note:${id}`);
-      await this.cacheManager.del(`notes:${userId}`);
-      return note;
-    } catch (error) {
-      console.error('Error deleting note:', error);
-      throw new HttpException(
-        'Failed to delete note',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    const note = await this.findOne(id, userId);
+
+    return this.prisma.note.delete({
+      where: { id },
+    });
   }
 }

@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, UsePipes } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req, UsePipes, Query } from '@nestjs/common';
 import { NotesService } from './notes.service';
 import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { createNoteSchema, updateNoteSchema, CreateNoteDto, UpdateNoteDto } from '../schemas/note.schema';
+import { paginationQuerySchema, PaginationQuery } from '../schemas/pagination.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 
@@ -21,8 +22,9 @@ export class NotesController {
   }
 
   @Get()
-  async findAll(@Req() req: AuthenticatedRequest) {
-    return this.notesService.findAll(req.user.userId);
+  @UsePipes(new ZodValidationPipe(paginationQuerySchema))
+  async findAll(@Query() query: PaginationQuery, @Req() req: AuthenticatedRequest) {
+    return this.notesService.findAll(req.user.userId, query);
   }
 
   @Get(':id')

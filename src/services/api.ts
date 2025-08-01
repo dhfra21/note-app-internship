@@ -1,17 +1,26 @@
 import { Note, NoteInput } from '@/schemas/note';
+import { PaginationQuery, PaginationResponse } from '@/schemas/pagination';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 class ApiService {
-  async getNotes(token: string): Promise<Note[]> {
+  async getNotes(token: string, query: Partial<PaginationQuery> = {}): Promise<PaginationResponse<Note>> {
+    const params = new URLSearchParams();
+    
+    if (query.page) params.append('page', query.page.toString());
+    if (query.limit) params.append('limit', query.limit.toString());
+    if (query.search) params.append('search', query.search);
+    if (query.sortBy) params.append('sortBy', query.sortBy);
+    if (query.sortOrder) params.append('sortOrder', query.sortOrder);
+
     console.log('Making API request:', {
-      endpoint: `${API_URL}/api/notes`,
+      endpoint: `${API_URL}/api/notes?${params.toString()}`,
       hasToken: !!token,
       tokenLength: token?.length,
       tokenPreview: token ? token.substring(0, 20) + '...' : null
     });
 
-    const response = await fetch(`${API_URL}/api/notes`, {
+    const response = await fetch(`${API_URL}/api/notes?${params.toString()}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',

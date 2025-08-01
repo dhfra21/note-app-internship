@@ -5,7 +5,9 @@ import { Container, Typography, Box, Alert, Snackbar, CircularProgress } from '@
 import NoteForm from './NoteForm';
 import NoteCard from './NoteCard';
 import NotesFilter from './NotesFilter';
+import Pagination from './Pagination';
 import { Note } from '../schemas/note';
+import { PaginationQuery } from '../schemas/pagination';
 import { api } from '../services/api';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,12 +21,21 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
     const router = useRouter();
     const { token, isAuthenticated, isLoading } = useAuth();
     const [notes, setNotes] = useState<Note[]>(initialNotes);
-    const [filteredNotes, setFilteredNotes] = useState<Note[]>(initialNotes);
     const [editingNote, setEditingNote] = useState<Note | undefined>();
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [dateFilter, setDateFilter] = useState('');
+    
+    // Pagination state
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 10,
+        total: initialNotes.length,
+        totalPages: Math.ceil(initialNotes.length / 10),
+        hasNext: false,
+        hasPrev: false,
+    });
 
     useEffect(() => {
         if (!isLoading && !isAuthenticated) {
@@ -32,50 +43,6 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
             return;
         }
     }, [isAuthenticated, isLoading, router]);
-
-    useEffect(() => {
-        const lowerCaseQuery = searchQuery.toLowerCase();
-        
-        const now = new Date();
-        let startDate = null;
-
-        switch (dateFilter) {
-            case 'today':
-                startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                break;
-            case 'week':
-                const firstDayOfWeek = now.getDate() - now.getDay();
-                startDate = new Date(now.getFullYear(), now.getMonth(), firstDayOfWeek);
-                break;
-            case 'month':
-                startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-                break;
-            case 'year':
-                startDate = new Date(now.getFullYear(), 0, 1);
-                break;
-            default:
-                startDate = null;
-        }
-
-        const filtered = notes.filter(note => {
-            const titleMatch = note.title.toLowerCase().includes(lowerCaseQuery);
-
-            if (!startDate) {
-                return titleMatch;
-            }
-
-            try {
-                const noteDate = new Date(note.updatedAt);
-                const dateMatch = noteDate >= startDate;
-                return titleMatch && dateMatch;
-            } catch (e) {
-                console.error('Error parsing date for note:', note, e);
-                return titleMatch;
-            }
-        });
-        
-        setFilteredNotes(filtered);
-    }, [notes, searchQuery, dateFilter]);
 
     // Show loading spinner while auth is being checked
     if (isLoading) {
@@ -89,19 +56,57 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
         );
     }
 
+    // Fetch notes with pagination
+    const fetchNotes = async (query: Partial<PaginationQuery> = {}) => {
+        if (!token) return;
+        
+        try {
+            setLoading(true);
+            const response = await api.getNotes(token, {
+                page: pagination.page,
+                limit: pagination.limit,
+                search: searchQuery,
+                sortBy: 'updatedAt',
+                sortOrder: 'desc',
+                ...query,
+            });
+            
+            setNotes(response.data);
+            setPagination(response.pagination);
+        } catch (err) {
+            setError('Failed to fetch notes');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Handle pagination changes
+    const handlePageChange = (newPage: number) => {
+        fetchNotes({ page: newPage });
+    };
+
+    const handleLimitChange = (newLimit: number) => {
+        fetchNotes({ page: 1, limit: newLimit });
+    };
+
+    // Handle search changes
     const handleSearchChange = (value: string) => {
         setSearchQuery(value);
+        fetchNotes({ page: 1, search: value });
     };
 
     const handleDateFilterChange = (value: string) => {
         setDateFilter(value);
+        // Reset to first page when filter changes
+        fetchNotes({ page: 1 });
     };
 
     const handleCreateNote = async (noteData: { title: string; content: string }) => {
         if (!token) return;
         try {
             const newNote = await api.createNote(noteData, token);
-            setNotes([...notes, newNote]);
+            // Refresh the current page after creating a note
+            fetchNotes();
         } catch (err) {
             setError('Failed to create note');
         }
@@ -124,7 +129,8 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
         if (!token) return;
         try {
             await api.deleteNote(id, token);
-            setNotes(notes.filter((note) => note.id !== id));
+            // Refresh the current page after deleting a note
+            fetchNotes();
         } catch (err) {
             setError('Failed to delete note');
         }
@@ -153,18 +159,33 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
 
             <Box sx={{ mt: 4 }}>
                 {loading ? (
-                    <Typography>Loading notes...</Typography>
-                ) : filteredNotes.length === 0 ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : notes.length === 0 ? (
                     <Typography>No notes yet. Create your first note!</Typography>
                 ) : (
-                    filteredNotes.map((note) => (
-                        <NoteCard
-                            key={note.id}
-                            note={note}
-                            onEdit={handleEditNote}
-                            onDelete={handleDeleteNote}
+                    <>
+                        {notes.map((note) => (
+                            <NoteCard
+                                key={note.id}
+                                note={note}
+                                onEdit={handleEditNote}
+                                onDelete={handleDeleteNote}
+                            />
+                        ))}
+                        
+                        <Pagination
+                            page={pagination.page}
+                            limit={pagination.limit}
+                            total={pagination.total}
+                            totalPages={pagination.totalPages}
+                            hasNext={pagination.hasNext}
+                            hasPrev={pagination.hasPrev}
+                            onPageChange={handlePageChange}
+                            onLimitChange={handleLimitChange}
                         />
-                    ))
+                    </>
                 )}
             </Box>
 

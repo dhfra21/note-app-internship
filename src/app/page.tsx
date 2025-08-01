@@ -12,8 +12,8 @@ async function getNotes() {
   }
 
   try {
-    const notes = await api.getNotes(token);
-    return notes;
+    const response = await api.getNotes(token);
+    return response.data; // Return just the notes array for initial load
   } catch (error) {
     console.error('Failed to fetch notes:', error);
     return [];
