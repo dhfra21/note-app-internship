@@ -34,7 +34,7 @@ export class NotesService {
     }
   }
 
-  async findAll(userId: number) {
+  async findAll(userId: number, query?: any) {
     try {
       // Try to get from cache first
       const cachedNotes = await this.cacheManager.get(`notes:${userId}`);
