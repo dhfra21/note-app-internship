@@ -109,6 +109,9 @@ export class UsersController {
 
       // Create URL for the image
       const imageUrl = `/uploads/profiles/${uniqueFilename}`;
+      console.log('Generated image URL:', imageUrl);
+      console.log('File path on disk:', filePath);
+      console.log('File exists after write:', fs.existsSync(filePath));
 
       // Update the user's profile picture URL
       const updatedUser = await prisma.user.update({
@@ -119,6 +122,8 @@ export class UsersController {
           profilePicture: imageUrl 
         },
       });
+
+      console.log('Updated user profile picture:', updatedUser.profilePicture);
 
       return {
         message: 'Profile picture uploaded successfully',
@@ -166,6 +171,37 @@ export class UsersController {
     } catch (error) {
       console.error('Error fetching user profile:', error);
       throw new BadRequestException(error.message || 'Failed to fetch user profile');
+    }
+  }
+
+  @Get('test-uploads')
+  @UseGuards(JwtAuthGuard)
+  async testUploads() {
+    try {
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      const profilesDir = path.join(uploadsDir, 'profiles');
+      
+      const uploadsExists = fs.existsSync(uploadsDir);
+      const profilesExists = fs.existsSync(profilesDir);
+      
+      let files: string[] = [];
+      if (profilesExists) {
+        files = fs.readdirSync(profilesDir);
+      }
+      
+      return {
+        message: 'Uploads directory test',
+        uploadsDir,
+        uploadsExists,
+        profilesDir,
+        profilesExists,
+        files,
+        currentWorkingDir: process.cwd(),
+        __dirname: __dirname
+      };
+    } catch (error) {
+      console.error('Error testing uploads:', error);
+      throw new BadRequestException(error.message || 'Failed to test uploads');
     }
   }
 } 

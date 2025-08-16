@@ -3,7 +3,8 @@ import { redirect } from 'next/navigation';
 import NotesClient from '@/components/NotesClient';
 import { api } from '@/services/api';
 
-async function getNotes() {
+export default async function Home() {
+  // Immediate authentication check - redirect before any other logic
   const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
 
@@ -11,17 +12,12 @@ async function getNotes() {
     redirect('/login');
   }
 
+  // If we get here, user is authenticated
   try {
     const notes = await api.getNotes(token);
-    return notes;
+    return <NotesClient initialNotes={notes} />;
   } catch (error) {
     console.error('Failed to fetch notes:', error);
-    return [];
+    return <NotesClient initialNotes={[]} />;
   }
-}
-
-export default async function Home() {
-  const initialNotes = await getNotes();
-
-  return <NotesClient initialNotes={initialNotes} />;
 }

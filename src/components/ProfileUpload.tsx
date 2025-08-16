@@ -41,8 +41,12 @@ const ProfileUpload: React.FC = () => {
         throw new Error('Failed to fetch profile picture');
       }
       const data = await response.json();
+      console.log('Profile data received:', data);
       if (data.user.profilePicture) {
+        console.log('Profile picture path:', data.user.profilePicture);
         setProfilePicture(data.user.profilePicture);
+      } else {
+        console.log('No profile picture found');
       }
     } catch (err) {
       console.error('Error fetching profile picture:', err);
@@ -115,21 +119,30 @@ const ProfileUpload: React.FC = () => {
   const getProfilePictureUrl = () => {
     if (previewUrl) return previewUrl;
     if (profilePicture) {
+      console.log('Constructing URL for profile picture:', profilePicture);
+      
       // If it's already a full URL, return as is
       if (profilePicture.startsWith('http')) {
+        console.log('Returning full URL:', profilePicture);
         return profilePicture;
       }
       // If it's a base64 data URL, return as is
       if (profilePicture.startsWith('data:')) {
+        console.log('Returning base64 data URL');
         return profilePicture;
       }
-      // If it's a relative path, construct the full URL
-      if (profilePicture.startsWith('/')) {
-        return `http://localhost:3001${profilePicture}`;
+      // If it's a relative path starting with /uploads, construct the full URL
+      if (profilePicture.startsWith('/uploads/')) {
+        const fullUrl = `http://localhost:3001${profilePicture}`;
+        console.log('Constructed full URL from /uploads path:', fullUrl);
+        return fullUrl;
       }
       // If it's just a filename, construct the full URL
-      return `http://localhost:3001/uploads/profiles/${profilePicture}`;
+      const fullUrl = `http://localhost:3001/uploads/profiles/${profilePicture}`;
+      console.log('Constructed full URL from filename:', fullUrl);
+      return fullUrl;
     }
+    console.log('No profile picture available');
     return undefined;
   };
 

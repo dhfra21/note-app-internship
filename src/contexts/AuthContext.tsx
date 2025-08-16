@@ -1,15 +1,15 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Cookies from 'js-cookie';
 
 interface AuthContextType {
   isAuthenticated: boolean;
   token: string | null;
+  isLoading: boolean;
   login: (token: string) => void;
   logout: () => void;
-  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -19,6 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     // Check if token exists in cookies on initial load
@@ -26,15 +27,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     console.log('Auth State Check:', {
       hasStoredToken: !!storedToken,
       tokenLength: storedToken?.length,
-      isAuthenticated
-    });
-    
-    // Check if token exists in cookies on initial load
-    const storedToken = Cookies.get('token');
-    console.log('Auth State Check:', {
-      hasStoredToken: !!storedToken,
-      tokenLength: storedToken?.length,
-      isAuthenticated
+      isAuthenticated,
+      currentPath: pathname
     });
     
     if (storedToken) {
@@ -49,13 +43,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.ok) {
           setToken(storedToken);
           setIsAuthenticated(true);
+          setIsLoading(false);
         } else {
           // If token is invalid, clear it and redirect to login
           console.log('Invalid token detected, logging out');
           Cookies.remove('token');
           setToken(null);
           setIsAuthenticated(false);
-          router.push('/login');
+          setIsLoading(false);
+          if (pathname !== '/login' && pathname !== '/register') {
+            router.push('/login');
+          }
         }
       })
       .catch(error => {
@@ -64,15 +62,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         Cookies.remove('token');
         setToken(null);
         setIsAuthenticated(false);
-        router.push('/login');
+        setIsLoading(false);
+        if (pathname !== '/login' && pathname !== '/register') {
+          router.push('/login');
+        }
       });
     } else {
       // No token found, ensure we're logged out
       setToken(null);
       setIsAuthenticated(false);
-      router.push('/login');
+      setIsLoading(false);
+      if (pathname !== '/login' && pathname !== '/register') {
+        router.push('/login');
+      }
     }
-  }, []);
+  }, [pathname, router]);
 
   const login = (newToken: string) => {
     console.log('Login called with token:', {
@@ -81,28 +85,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     
     Cookies.set('token', newToken, { expires: 7 }); // Token expires in 7 days
-    console.log('Login called with token:', {
-      tokenLength: newToken.length,
-      tokenPreview: newToken.substring(0, 20) + '...'
-    });
-    
-    Cookies.set('token', newToken, { expires: 7 }); // Token expires in 7 days
     setToken(newToken);
     setIsAuthenticated(true);
+    setIsLoading(false);
   };
 
   const logout = () => {
     console.log('Logout called, clearing auth state');
     Cookies.remove('token');
-    console.log('Logout called, clearing auth state');
-    Cookies.remove('token');
     setToken(null);
     setIsAuthenticated(false);
+    setIsLoading(false);
     router.push('/login');
   };
 
+  // Don't render children while loading to prevent flash of wrong content
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, token, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ isAuthenticated, token, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

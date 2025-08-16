@@ -4,6 +4,7 @@ import React from 'react';
 import { Container, Typography, Box, Paper, Button } from '@mui/material';
 import Link from 'next/link';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import LogoutIcon from '@mui/icons-material/Logout';
 import ProfileUpload from '@/components/ProfileUpload';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -11,9 +12,7 @@ export default function ProfilePage() {
   const { logout } = useAuth();
 
   const handleLogout = () => {
-    if (window.confirm('Are you sure you want to logout?')) {
-      logout();
-    }
+    logout();
   };
 
   return (
@@ -29,9 +28,10 @@ export default function ProfilePage() {
           </Button>
         </Link>
         <Button
-          onClick={handleLogout}
           variant="contained"
           color="error"
+          startIcon={<LogoutIcon />}
+          onClick={handleLogout}
           sx={{ ml: 2 }}
         >
           Logout

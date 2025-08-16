@@ -5,14 +5,15 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token');
   const isAuthPage = request.nextUrl.pathname.startsWith('/login') || 
                     request.nextUrl.pathname.startsWith('/register');
+  const isRootPage = request.nextUrl.pathname === '/';
 
   // If trying to access auth pages while logged in, redirect to home
   if (token && isAuthPage) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // If trying to access protected pages while logged out, redirect to login
-  if (!token && !isAuthPage) {
+  // If trying to access root page or any protected page while logged out, redirect to login
+  if (!token && (isRootPage || !isAuthPage)) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
