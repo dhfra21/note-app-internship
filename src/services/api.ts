@@ -1,32 +1,22 @@
-import { Note, NoteInput } from '@/schemas/note';
-import { PaginationQuery, PaginationResponse } from '@/schemas/pagination';
+import { Note } from '@/types/note';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 class ApiService {
-  async getNotes(token: string, query: Partial<PaginationQuery> = {}): Promise<PaginationResponse<Note>> {
-    const params = new URLSearchParams();
-    
-    if (query.page) params.append('page', query.page.toString());
-    if (query.limit) params.append('limit', query.limit.toString());
-    if (query.search) params.append('search', query.search);
-    if (query.sortBy) params.append('sortBy', query.sortBy);
-    if (query.sortOrder) params.append('sortOrder', query.sortOrder);
-
+  async getNotes(token: string): Promise<Note[]> {
     console.log('Making API request:', {
-      endpoint: `${API_URL}/api/notes?${params.toString()}`,
+      endpoint: `${API_URL}/api/notes`,
       hasToken: !!token,
       tokenLength: token?.length,
       tokenPreview: token ? token.substring(0, 20) + '...' : null
     });
 
-    const response = await fetch(`${API_URL}/api/notes?${params.toString()}`, {
+    const response = await fetch(`${API_URL}/api/notes`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      // Enable caching for better performance
-      next: { revalidate: 30 }, // Cache for 30 seconds
+      cache: 'no-store', // Disable caching for server components
     });
 
     if (!response.ok) {
@@ -40,7 +30,7 @@ class ApiService {
     return response.json();
   }
 
-  async createNote(noteData: NoteInput, token: string): Promise<Note> {
+  async createNote(noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>, token: string): Promise<Note> {
     const response = await fetch(`${API_URL}/api/notes`, {
       method: 'POST',
       headers: {
@@ -57,7 +47,7 @@ class ApiService {
     return response.json();
   }
 
-  async updateNote(id: string, noteData: NoteInput, token: string): Promise<Note> {
+  async updateNote(id: string, noteData: Omit<Note, 'id' | 'createdAt' | 'updatedAt'>, token: string): Promise<Note> {
     const response = await fetch(`${API_URL}/api/notes/${id}`, {
       method: 'PATCH',
       headers: {

@@ -4,13 +4,14 @@ import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
 import { createNoteSchema, updateNoteSchema, CreateNoteDto, UpdateNoteDto } from '../schemas/note.schema';
 import { paginationQuerySchema, PaginationQuery } from '../schemas/pagination.schema';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApiRateLimitGuard } from '../auth/guards/api-rate-limit.guard';
 import { Request } from 'express';
 
 interface AuthenticatedRequest extends Request {
   user: { userId: number };
 }
 
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ApiRateLimitGuard)
 @Controller('notes')
 export class NotesController {
   constructor(private readonly notesService: NotesService) {}

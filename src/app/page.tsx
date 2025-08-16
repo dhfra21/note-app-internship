@@ -12,11 +12,11 @@ async function getNotes() {
   }
 
   try {
-    const response = await api.getNotes(token);
-    return response.data || []; // Return empty array if data is undefined
+    const notes = await api.getNotes(token);
+    return notes;
   } catch (error) {
     console.error('Failed to fetch notes:', error);
-    return []; // Return empty array on error
+    return [];
   }
 }
 

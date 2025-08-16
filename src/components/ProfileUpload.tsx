@@ -111,11 +111,33 @@ const ProfileUpload: React.FC = () => {
     }
   };
 
+  // Construct the full URL for the profile picture
+  const getProfilePictureUrl = () => {
+    if (previewUrl) return previewUrl;
+    if (profilePicture) {
+      // If it's already a full URL, return as is
+      if (profilePicture.startsWith('http')) {
+        return profilePicture;
+      }
+      // If it's a base64 data URL, return as is
+      if (profilePicture.startsWith('data:')) {
+        return profilePicture;
+      }
+      // If it's a relative path, construct the full URL
+      if (profilePicture.startsWith('/')) {
+        return `http://localhost:3001${profilePicture}`;
+      }
+      // If it's just a filename, construct the full URL
+      return `http://localhost:3001/uploads/profiles/${profilePicture}`;
+    }
+    return undefined;
+  };
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
       <Box sx={{ position: 'relative' }}>
         <Avatar
-          src={previewUrl || profilePicture || undefined}
+          src={getProfilePictureUrl()}
           sx={{ 
             width: 150, 
             height: 150,

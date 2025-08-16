@@ -29,12 +29,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated
     });
     
+    // Check if token exists in cookies on initial load
+    const storedToken = Cookies.get('token');
+    console.log('Auth State Check:', {
+      hasStoredToken: !!storedToken,
+      tokenLength: storedToken?.length,
+      isAuthenticated
+    });
+    
     if (storedToken) {
-      // Set token immediately for better UX
-      setToken(storedToken);
-      setIsAuthenticated(true);
-      
-      // Verify token asynchronously without blocking the UI
+      // Verify token is valid by making a test request
       fetch('http://localhost:3001/api/notes', {
         headers: {
           'Authorization': `Bearer ${storedToken}`,
@@ -42,7 +46,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       })
       .then(response => {
-        if (!response.ok) {
+        if (response.ok) {
+          setToken(storedToken);
+          setIsAuthenticated(true);
+        } else {
           // If token is invalid, clear it and redirect to login
           console.log('Invalid token detected, logging out');
           Cookies.remove('token');
@@ -58,15 +65,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setToken(null);
         setIsAuthenticated(false);
         router.push('/login');
-      })
-      .finally(() => {
-        setIsLoading(false);
       });
     } else {
       // No token found, ensure we're logged out
       setToken(null);
       setIsAuthenticated(false);
-      setIsLoading(false);
       router.push('/login');
     }
   }, []);
@@ -78,11 +81,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     
     Cookies.set('token', newToken, { expires: 7 }); // Token expires in 7 days
+    console.log('Login called with token:', {
+      tokenLength: newToken.length,
+      tokenPreview: newToken.substring(0, 20) + '...'
+    });
+    
+    Cookies.set('token', newToken, { expires: 7 }); // Token expires in 7 days
     setToken(newToken);
     setIsAuthenticated(true);
   };
 
   const logout = () => {
+    console.log('Logout called, clearing auth state');
+    Cookies.remove('token');
     console.log('Logout called, clearing auth state');
     Cookies.remove('token');
     setToken(null);

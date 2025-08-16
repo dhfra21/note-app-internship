@@ -19,15 +19,14 @@ import {
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const [formData, setFormData] = useState<LoginInput>({
-    email: '',
-    password: '',
-  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [error, setError] = useState('');
 
   const validateForm = (): boolean => {
     try {
+      const formData: LoginInput = { email, password };
       loginSchema.parse(formData);
       setErrors({});
       return true;
@@ -65,7 +64,7 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
@@ -119,8 +118,8 @@ export default function LoginPage() {
               name="email"
               autoComplete="email"
               autoFocus
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               error={!!errors.email}
               helperText={errors.email}
             />
@@ -133,8 +132,8 @@ export default function LoginPage() {
               type="password"
               id="password"
               autoComplete="current-password"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               error={!!errors.password}
               helperText={errors.password}
             />
