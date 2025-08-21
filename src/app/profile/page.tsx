@@ -1,9 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Container, Typography, Box, Paper, Button } from '@mui/material';
+import { Container, Typography, Box, Paper, Button, AppBar, Toolbar } from '@mui/material';
 import Link from 'next/link';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ProfileUpload from '@/components/ProfileUpload';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,35 +15,30 @@ export default function ProfilePage() {
   };
 
   return (
-    <Container maxWidth="md" sx={{ py: 4 }}>
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Link href="/" style={{ textDecoration: 'none' }}>
-          <Button
-            startIcon={<ArrowBackIcon />}
-            variant="outlined"
-            color="primary"
-          >
-            Back to Notes
+    <>
+      <AppBar position="static" sx={{ mb: 3 }}>
+        <Toolbar>
+          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+            Profile
+          </Typography>
+          <Link href="/" style={{ textDecoration: 'none' }}>
+            <Button color="inherit" sx={{ mr: 1 }}>Notes</Button>
+          </Link>
+          <Button color="inherit" startIcon={<LogoutIcon />} onClick={handleLogout}>
+            Logout
           </Button>
-        </Link>
-        <Button
-          variant="contained"
-          color="error"
-          startIcon={<LogoutIcon />}
-          onClick={handleLogout}
-          sx={{ ml: 2 }}
-        >
-          Logout
-        </Button>
-      </Box>
-      <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
-        <Typography variant="h3" component="h1" gutterBottom>
-          Profile Settings
-        </Typography>
-        <Box sx={{ mt: 4 }}>
-          <ProfileUpload />
-        </Box>
-      </Paper>
-    </Container>
+        </Toolbar>
+      </AppBar>
+      <Container maxWidth="md" sx={{ py: 4 }}>
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 2 }}>
+          <Typography variant="h3" component="h1" gutterBottom>
+            Profile Settings
+          </Typography>
+          <Box sx={{ mt: 4 }}>
+            <ProfileUpload />
+          </Box>
+        </Paper>
+      </Container>
+    </>
   );
-} 
+}

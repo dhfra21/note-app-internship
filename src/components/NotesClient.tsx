@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Container, Typography, Box, Alert, Snackbar, Button, AppBar, Toolbar } from '@mui/material';
+import { Container, Typography, Box, Alert, Snackbar, Button, AppBar, Toolbar, Grid } from '@mui/material';
 import NoteForm from './NoteForm';
 import NoteCard from './NoteCard';
 import NotesFilter from './NotesFilter';
@@ -133,6 +133,20 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
                     <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
                         Notes App
                     </Typography>
+                    <Link href="/profile" style={{ textDecoration: 'none' }}>
+                        <Button 
+                            color="inherit"
+                            sx={{
+                                mr: 1,
+                                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                }
+                            }}
+                        >
+                            Profile
+                        </Button>
+                    </Link>
                     <Button 
                         color="inherit" 
                         onClick={handleLogout}
@@ -170,14 +184,17 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
                     ) : filteredNotes.length === 0 ? (
                         <Typography>No notes yet. Create your first note!</Typography>
                     ) : (
-                        filteredNotes.map((note) => (
-                            <NoteCard
-                                key={note.id}
-                                note={note}
-                                onEdit={handleEditNote}
-                                onDelete={handleDeleteNote}
-                            />
-                        ))
+                        <Grid container spacing={2}>
+                            {filteredNotes.map((note) => (
+                                <Grid key={note.id} item xs={12} sm={6} md={4}>
+                                    <NoteCard
+                                        note={note}
+                                        onEdit={handleEditNote}
+                                        onDelete={handleDeleteNote}
+                                    />
+                                </Grid>
+                            ))}
+                        </Grid>
                     )}
                 </Box>
 
@@ -190,19 +207,6 @@ export default function NotesClient({ initialNotes }: NotesClientProps) {
                         {error}
                     </Alert>
                 </Snackbar>
-
-                <div className="space-x-4">
-                    <Link href="/notes">
-                        <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-                            Go to Notes
-                        </button>
-                    </Link>
-                    <Link href="/profile">
-                        <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                            Go to Profile
-                        </button>
-                    </Link>
-                </div>
             </Container>
         </>
     );

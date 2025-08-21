@@ -9,11 +9,11 @@ interface NotesFilterProps {
 const NotesFilter: React.FC<NotesFilterProps> = ({ onSearchChange, onDateFilterChange }) => {
   return (
     <Paper 
-      elevation={2} 
+      elevation={0}
       sx={{ 
         p: 2, 
-        mb: 3,
-        backgroundColor: 'white',
+        mb: 2,
+        backgroundColor: 'transparent',
         width: '100%',
       }}
     >
@@ -31,20 +31,14 @@ const NotesFilter: React.FC<NotesFilterProps> = ({ onSearchChange, onDateFilterC
           variant="outlined"
           onChange={(e) => onSearchChange(e.target.value)}
           sx={{ 
-            flex: 1, 
-            minWidth: '200px',
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: 'white'
-            }
+            flex: 1,
+            minWidth: '220px'
           }}
           size="medium"
         />
         <FormControl 
           sx={{ 
-            minWidth: '200px',
-            '& .MuiOutlinedInput-root': {
-              backgroundColor: 'white'
-            }
+            minWidth: '200px'
           }} 
           size="medium"
         >

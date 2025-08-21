@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TextField, Button, Box, Alert } from '@mui/material';
+import { TextField, Button, Box } from '@mui/material';
 import { Note, noteSchema, NoteInput } from '../schemas/note';
 
 interface NoteFormProps {
@@ -62,7 +62,7 @@ const NoteForm: React.FC<NoteFormProps> = ({ note, onSubmit, onCancel }) => {
     };
 
     return (
-        <Box component="form" onSubmit={handleSubmit} sx={{ mb: 3 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mb: 3, p: 2, borderRadius: 1, boxShadow: 1, backgroundColor: 'background.paper' }}>
             <TextField
                 fullWidth
                 label="Title"
@@ -89,9 +89,11 @@ const NoteForm: React.FC<NoteFormProps> = ({ note, onSubmit, onCancel }) => {
                 <Button type="submit" variant="contained" color="primary">
                     {note ? 'Update Note' : 'Create Note'}
                 </Button>
-                <Button onClick={onCancel} variant="outlined">
-                    Cancel
-                </Button>
+                {note ? (
+                    <Button onClick={onCancel} variant="outlined">
+                        Cancel
+                    </Button>
+                ) : null}
             </Box>
         </Box>
     );
