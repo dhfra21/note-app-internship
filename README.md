@@ -1,167 +1,153 @@
-# Notes App
+# Notes App (NestJS + Next.js)
 
-A full-stack notes application built with Next.js, NestJS, and PostgreSQL.
+Full‑stack notes application with JWT authentication, notes CRUD, profile image uploads, Redis caching, global input validation, and per‑route rate limiting.
 
 ## Features
 
-- User authentication with JWT
-- CRUD operations for notes
-- Profile picture upload
-- Rate limiting (NestJS + Nginx)
-- Redis caching
-- Nginx reverse proxy
+- User authentication (bcrypt + JWT)
+- Protected notes CRUD with ownership checks
+- Profile picture upload (Multer memory storage → static serving)
+- Redis caching for faster reads with targeted invalidation
+- Global Zod validation and centralized error handling
+- Per‑route rate limiting (NestJS) and Nginx reverse proxy
 
 ## Architecture
 
 ```
-Internet → Nginx (Port 80) → Frontend (Port 3000) → Backend (Port 3001) → Database
+Internet → Nginx (80) → Next.js (3000) → NestJS API (3001) → PostgreSQL
+                                   ↘ Redis (6379) for cache
 ```
 
-## Quick Start with Docker Compose
+## Quick Start (Docker Compose)
 
 ### Prerequisites
 - Docker
 - Docker Compose
 
-### Running the Application
+### 1) Clone
+```bash
+git clone <repository-url>
+cd note-app-internship
+```
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd note-app-internship
-   ```
+### 2) Environment
+Create a `.env` at repo root and `backend/.env`.
 
-2. **Start all services**
-   ```bash
-   docker-compose up -d
-   ```
+Root `.env` (optional for Next.js):
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
 
-3. **Access the application**
-   - Frontend: http://localhost
-   - Backend API: http://localhost/api
-   - Health Check: http://localhost/health
+`backend/.env`:
+```env
+DATABASE_URL=postgresql://postgres:postgres@db:5432/notes?schema=public
+REDIS_HOST=redis
+REDIS_PORT=6379
+JWT_SECRET=replace-with-strong-secret
+```
 
-### Services
+### 3) Up
+```bash
+docker-compose up -d --build
+```
 
-- **Frontend**: Next.js application (Port 3000)
-- **Backend**: NestJS API (Port 3001)
-- **Database**: PostgreSQL (Port 5432)
-- **Redis**: Caching and rate limiting (Port 6379)
-- **Nginx**: Reverse proxy (Port 80)
+Open:
+- Frontend: http://localhost
+- API: http://localhost/api
 
-## Development Setup
+## Local Development (without Docker)
 
-### Backend (NestJS)
-
+### Backend
 ```bash
 cd backend
 npm install
+cp .env.example .env  # if you have one; otherwise create as above
+npx prisma migrate dev
+npx prisma generate
 npm run start:dev
 ```
 
-### Frontend (Next.js)
-
+### Frontend
 ```bash
 npm install
 npm run dev
 ```
 
-### Database
+## API Overview
 
-```bash
-cd backend
-npx prisma migrate dev
-npx prisma generate
-```
+Auth
+- POST `/api/auth/register` → { email, password }
+- POST `/api/auth/login` → returns `{ access_token }`
+
+Notes (requires `Authorization: Bearer <token>`) 
+- GET `/api/notes` → list current user notes (cached per user)
+- POST `/api/notes` → { title, content }
+- PATCH `/api/notes/:id` → { title?, content? }
+- DELETE `/api/notes/:id`
+
+Users
+- POST `/api/users/upload-profile-picture` → multipart `file`
+- GET `/api/users/profile`
+
+## Caching
+
+- Per‑user list key: `notes:{userId}`
+- Per‑note key: `note:{id}`
+- Invalidation: on create/update/delete, relevant keys are deleted to avoid stale data.
 
 ## Rate Limiting
 
-The application implements **dual-layer rate limiting**:
-
-### Nginx Layer (Additional Protection)
-- **Auth endpoints**: 5 requests/minute
-- **API endpoints**: 30 requests/minute
-- **General**: 100 requests/minute
-
-### NestJS Layer (Application Level)
-- **Auth endpoints**: 5 requests/minute
-- **CRUD operations**: 30 requests/minute
-
-## Security Features
-
-- JWT authentication
-- Rate limiting (Nginx + NestJS)
-- Security headers
-- Input validation
-- CORS configuration
-
-## API Endpoints
-
-- `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration
-- `GET /api/notes` - Get user notes
-- `POST /api/notes` - Create note
-- `PATCH /api/notes/:id` - Update note
-- `DELETE /api/notes/:id` - Delete note
-- `POST /api/users/upload-profile-picture` - Upload profile picture
-- `GET /api/users/profile` - Get user profile
+- Application level (NestJS Throttler):
+  - Auth endpoints: 5 req/min
+  - CRUD endpoints: 30 req/min
+- Nginx reverse proxy is provided; add extra limits there if needed.
 
 ## Environment Variables
 
-### Backend
-- `DATABASE_URL` - PostgreSQL connection string
-- `REDIS_HOST` - Redis host
-- `REDIS_PORT` - Redis port
+Backend
+- `DATABASE_URL` (required)
+- `REDIS_HOST` (default: `localhost` in code, `redis` in Docker)
+- `REDIS_PORT` (default: `6379`)
+- `JWT_SECRET` (required; no weak defaults in production)
 
-### Frontend
-- `NEXT_PUBLIC_API_URL` - Backend API URL
+Frontend
+- `NEXT_PUBLIC_API_URL` (default: `http://localhost:3001`)
 
-## Production Deployment
+## Uploads
 
-1. **Update domain in nginx.conf**
-   ```nginx
-   server_name yourdomain.com;
-   ```
+Profile photos are written to `backend/uploads/profiles` and served at `/uploads/profiles/<filename>` by the NestJS static assets configuration.
 
-2. **Add SSL certificates**
-   ```bash
-   # Add SSL configuration to nginx.conf
-   ```
+## Notes on Data Model
 
-3. **Set environment variables**
-   ```bash
-   # Update docker-compose.yml with production values
-   ```
+- `User` has many `Note` via `userId`.
+- Ensure ownership checks use both `id` and `userId` in queries; consider a composite unique index or `findFirst` with both filters.
 
-## Monitoring
+## Production
 
-- **Nginx logs**: `/var/log/nginx/notes-app-*.log`
-- **Application logs**: Docker container logs
-- **Health check**: `GET /health`
+1. Set strong secrets and production database/redis URLs in env.
+2. Update `nginx.conf` with your domain and TLS.
+3. Build and run with Compose or your platform of choice.
 
 ## Troubleshooting
 
-### Common Issues
+Ports: 80, 3000, 3001, 5432, 6379 must be free.
 
-1. **Port conflicts**: Ensure ports 80, 3000, 3001, 5432, 6379 are available
-2. **Database connection**: Check if PostgreSQL is running
-3. **Redis connection**: Verify Redis service is up
-4. **Nginx configuration**: Validate nginx.conf syntax
-
-### Commands
-
+Logs
 ```bash
-# Check service status
-docker-compose ps
+docker-compose logs nginx | tail -n 200
+docker-compose logs backend | tail -n 200
+docker-compose logs frontend | tail -n 200
+```
 
-# View logs
-docker-compose logs nginx
-docker-compose logs backend
-docker-compose logs frontend
-
-# Restart services
-docker-compose restart nginx
-
-# Rebuild and restart
+Rebuild
+```bash
 docker-compose up -d --build
 ```
+
+## Roadmap / Improvements
+
+- Require `Note.userId` and enforce ownership at DB level
+- Switch `UsersController` to injected `PrismaService`
+- Add `/api/users/me` for lightweight auth checks
+- Wire pagination/sorting to queries (schemas already present)
+- Harden CORS and remove default JWT secret in code
