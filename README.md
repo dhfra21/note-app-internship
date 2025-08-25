@@ -1,4 +1,4 @@
-# Notes App (NestJS + Next.js)
+# Notes App as a blueprint for a Full-Stack application (NestJS + Next.js)
 
 Full‑stack notes application with JWT authentication, notes CRUD, profile image uploads, Redis caching, global input validation, and per‑route rate limiting.
 
